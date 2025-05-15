@@ -2,9 +2,6 @@ from datasets import load_dataset
 import json
 import os 
 
-OUTPUT_PATH = "datasets/openorca_formatted.jsonl"
-SAMPLE_SIZE = 5000
-
 def format_instructions(example):
     return {
         "prompt": f"### Instruciton: \n{example['question']}\n\n### Response:",
@@ -18,15 +15,19 @@ def save_to_json1(dataset, output_path):
             f.write("\n")
     print(f"Saved {len(dataset)} entries to {output_path}")
 
-def main():
-    print("Loading OpenOrca dataset...")
-    ds = load_dataset("Open-Orca/OpenOrca", split=f"train[:{SAMPLE_SIZE}]")
+def preprocess_main(dataset, sample_size):
+    print(f"Loading {dataset} dataset with {sample_size} samples...")
+    ds = load_dataset(dataset, split=f"train[:{sample_size}]")
 
     print("Formatting examples...")
     formatted = ds.map(format_instructions)
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    save_to_json1(formatted, OUTPUT_PATH)
+    print("Making formatted data file")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    output_dir = f"datasets/{dataset.replace('/', '_')}"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = f"{output_dir}/preprocessed_{timestamp}.jsonl"
 
-if __name__ == "__main__":
-    main()
+    save_to_json1(formatted, output_path)
+
+    return output_path

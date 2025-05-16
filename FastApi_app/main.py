@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from preprocess import preprocess_main
 from train import train_main
+from fastapi.testclient import TestClient
 app = FastAPI()
 
 class InputData(BaseModel):
@@ -18,7 +19,7 @@ class FullTrainConfig(BaseModel):
     model_name: str
     dataset: str
     sample_size: int
-    
+
 @app.post("/train")
 def train(config: FullTrainConfig):
     processed_path = preprocess_main(config.dataset, config.sample_size)
@@ -32,3 +33,5 @@ def train(config: FullTrainConfig):
 def heartbeat(connector_id: str):
     return {"status": "ok", "id": connector_id}
 
+def test_read_main():
+    repsonse = client.get

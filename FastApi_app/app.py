@@ -4,11 +4,17 @@ from pydantic import BaseModel
 from preprocess import preprocess_main
 from train import train_main
 from fastapi.testclient import TestClient
+
 app = FastAPI()
+
+@app.get("/heartbeat/{connector_id}")
+def heartbeat(connector_id: str):
+    return {"status": "ok", "id": connector_id}
 
 class InputData(BaseModel):
     feature1: float
     feature2: float
+
 
 @app.post("/predict")
 def predict(data: InputData):
@@ -28,10 +34,3 @@ def train(config: FullTrainConfig):
         "status": result, 
         "preprocessed_file": processed_path
     }
-
-@app.get("/heartbeat/{connector_id}")
-def heartbeat(connector_id: str):
-    return {"status": "ok", "id": connector_id}
-
-def test_read_main():
-    repsonse = client.get

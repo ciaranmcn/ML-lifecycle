@@ -5,8 +5,6 @@ from app.preprocess import preprocess_main
 from app.train import train_main
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from app.telemetry import setup_telemetry
-import sys
-
 
 
 app = FastAPI()

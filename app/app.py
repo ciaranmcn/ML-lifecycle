@@ -6,15 +6,7 @@ from app.train import train_main
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from app.telemetry import setup_telemetry
 import sys
-import time
-import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logger.info("🔥 App is starting...")
 
 
 app = FastAPI()
@@ -40,8 +32,7 @@ class FullTrainConfig(BaseModel):
 
 @app.post("/train")
 def train(config: FullTrainConfig):
-    print("⚡ train() called", flush=True)
-    sys.stdout.flush()
+    print("train() called")
     processed_path = preprocess_main(config.dataset, config.sample_size)
     result = train_main(config.model_name, processed_path)
     return {

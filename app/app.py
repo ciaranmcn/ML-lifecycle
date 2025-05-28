@@ -1,14 +1,17 @@
 from typing import List
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from app.preprocess import preprocess_main
-from app.train import train_main
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from app.telemetry import setup_telemetry
+import uuid
+from temporalio.client import Client
+from workflows import FeedbackWorkflow
+# from app.preprocess import preprocess_main
+# from app.train import train_main
+# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+# from app.telemetry import setup_telemetry
 
 
 app = FastAPI()
-
+client = None
 @app.get("/heartbeat/{connector_id}")
 def heartbeat(connector_id: str):
     return {"status": "ok", "id": connector_id}
@@ -37,3 +40,19 @@ def train(config: FullTrainConfig):
         "status": result, 
         "preprocessed_file": processed_path
     }
+
+@app.post("/start")
+async def start_workflow()
+    workflow_id = str(uuid.uuid4())
+    await client.start_workflow(
+        FeedbackWorkflow.run,
+        id=workflow_id,
+        task_queue="feedback-task-queue"
+    )
+    return {"workflow-id": workflow_id}
+
+@app.post("/send")
+async def send_feedback(request: Request):
+    body = await request.json()
+    workflow_id = body["workflow_id"]
+    feedback = body["message"]

@@ -56,3 +56,10 @@ async def send_feedback(request: Request):
     body = await request.json()
     workflow_id = body["workflow_id"]
     feedback = body["message"]
+
+@app.get("/result/{workflow_id}")
+async def get_result(workflow_id: str):
+    handle = client.get_workflow_handle(workflow_id)
+    result = await handle.result()
+    return{"result": result}
+    

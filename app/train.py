@@ -55,7 +55,7 @@ def train_main(model_name: str, data_path: str):
     )
 
     trainer = Trainer(
-        model=model,args
+        model=model,
        args=training_args,
         train_dataset=dataset,
         tokenizer=tokenizer,

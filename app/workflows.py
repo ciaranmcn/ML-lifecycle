@@ -31,6 +31,10 @@ class FeedbackWorkflow:
 
             workflow.logger.info(f"Got feedback: {self.feedback_msg}")
             
+            await workflow.execute_activity(
+                store_feedback_actvity, self.feedback_msg,
+                start_to_close_timeout=timedelta(seconds=10)
+            )
             return f"Final response: {self.feedback_msg}"
 
 

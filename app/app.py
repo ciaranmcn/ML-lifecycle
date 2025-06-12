@@ -2,8 +2,9 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import uuid
+from uuid import UUID
 from typing import List
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from pydantic import BaseModel
 from temporalio.client import Client
 from app.workflows import FeedbackWorkflow
@@ -23,30 +24,30 @@ async def startup_event():
     global temporal_client
     temporal_client = await Client.connect("localhost:7233")
 
-@app.post("/start")
-async def start_workflow():
+@app.post("/start/{workflow_id}")
+async def start_workflow(workflow_id: UUID):
     with tracer.start_as_current_span("start_workflow"):
-        workflow_id = str(uuid.uuid4())
-        await temporal_client.start_workflow(
-            FeedbackWorkflow.run,
-            id=workflow_id,
-            task_queue="feedback-task-queue"
-        )
-        return {"workflow-id": workflow_id}
-
-@app.post("/send")
-async def send_feedback(request: Request):
+        try: 
+            await temporal_client.start_workflow(
+                FeedbackWorkflow.run,
+                id=workflow_id,
+                task_queue="feedback-task-queue"
+            )
+            return {"workflow-id": workflow_id}
+        except Exception as e:
+            return {"exception": str(e)}
+    
+# intercept the signal, signal handler
+@app.post("/send/{workflow_id}")
+async def send_feedback(workflow_id: UUID, feedback:str = Body(..., embed=True)):
     with tracer.start_as_current_span("send_feedback"):
-        body = await request.json()
-        workflow_id = body["workflow_id"]
-        feedback = body["message"]
-
         handle = temporal_client.get_workflow_handle(workflow_id)
         await handle.signal("feedback", feedback)
         return {"status": "signal sent", "workflow-id": workflow_id}
-
+    
+# to retireve result : workdlow id as a parameter on all
 @app.get("/result/{workflow_id}")
-async def get_result(workflow_id: str):
+async def get_result(workflow_id: UUID):
     with tracer.start_as_current_span("get_result"):
         handle = temporal_client.get_workflow_handle(workflow_id)
         result = await handle.result()

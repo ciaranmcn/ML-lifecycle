@@ -6,6 +6,7 @@ tracer = trace.get_tracer(__name__)
 class FeedbackWorkflow:
     def __init__(self) -> None:
         self.feedback_msg = None
+        self._cancelled = False
         
     @workflow.signal
     async def feedback(self, msg: str):
@@ -32,7 +33,7 @@ class FeedbackWorkflow:
             workflow.logger.info(f"Got feedback: {self.feedback_msg}")
             
             await workflow.execute_activity(
-                store_feedback_actvity, self.feedback_msg,
+                store_feedback_activity, self.feedback_msg,
                 start_to_close_timeout=timedelta(seconds=10)
             )
             return f"Final response: {self.feedback_msg}"

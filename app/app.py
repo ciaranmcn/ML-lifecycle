@@ -3,7 +3,8 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import uuid
 from uuid import UUID
-from typing import List
+from contextlib import asynccontextmanager
+from typing import List, Optional
 from fastapi import FastAPI, Request, Body
 from pydantic import BaseModel
 from temporalio.client import Client
@@ -13,16 +14,19 @@ from app.train import train_main
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from app.telemetry import setup_telemetry
 
-app = FastAPI()
 tracer = setup_telemetry()
-FastAPIInstrumentor.instrument_app(app)
 temporal_client = None  
 
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app:FastAPI):
     global temporal_client
     temporal_client = await Client.connect("localhost:7233")
+    yield
+    await temporal_client.close()
+    
+app = FastAPI(lifespan=lifespan)
+
 
 @app.post("/start/{workflow_id}")
 async def start_workflow(workflow_id: UUID):
@@ -30,7 +34,7 @@ async def start_workflow(workflow_id: UUID):
         try: 
             await temporal_client.start_workflow(
                 FeedbackWorkflow.run,
-                id=workflow_id,
+                id=str(workflow_id),
                 task_queue="feedback-task-queue"
             )
             return {"workflow-id": workflow_id}
@@ -39,17 +43,23 @@ async def start_workflow(workflow_id: UUID):
     
 # intercept the signal, signal handler
 @app.post("/send/{workflow_id}")
-async def send_feedback(workflow_id: UUID, feedback:str = Body(..., embed=True)):
+async def send_feedback(workflow_id: UUID, feedback: str = Body(...)):
     with tracer.start_as_current_span("send_feedback"):
-        handle = temporal_client.get_workflow_handle(workflow_id)
-        await handle.signal("feedback", feedback)
-        return {"status": "signal sent", "workflow-id": workflow_id}
+        print("🟡 Received feedback:", feedback)
+        try:
+            handle = temporal_client.get_workflow_handle(str(workflow_id))
+            print("🟢 Got handle:", handle)
+            await handle.signal("feedback", feedback)
+            print("✅ Signal sent!")
+            return {"status": "signal sent", "workflow-id": workflow_id}
+        except Exception as e:
+            print("❌ SIGNAL ERROR:", str(e))
     
 # to retireve result : workdlow id as a parameter on all
 @app.get("/result/{workflow_id}")
 async def get_result(workflow_id: UUID):
     with tracer.start_as_current_span("get_result"):
-        handle = temporal_client.get_workflow_handle(workflow_id)
+        handle = temporal_client.get_workflow_handle(str(workflow_id))
         result = await handle.result()
         return {"result": result}
 
